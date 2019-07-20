@@ -27,7 +27,7 @@ void Get_Attitude()
 	LPF_1_db(10,0.001,(float)(Get_Y_Acc()),&Acc_Y);
 	LPF_1_db(25,0.001,-(float)(Get_Z_Acc()),&Acc_Z);
 	Gyro_X= -(Get_X_Gyro() + 21.9) ;
-	LPF_1_db(30,0.001,-(float)(Get_Y_Gyro()+25),&Gyro_Y);
+	LPF_1_db(30,0.001,-(float)(Get_Y_Gyro()+15),&Gyro_Y);
 	
 	faiZ= Acc_Z/16384.0f;
 	if (faiZ > 1) faiZ = 1;
@@ -44,18 +44,19 @@ void Get_Attitude()
 	//     if (faiY < -1) faiY = -1;
 	//  gyro.Gravity_Angle = Acc_Y*0.01 ;
 	
-	gyro.Angle_Speed=-Gyro_Y*0.03051757*1.56;
+	gyro.Angle_Speed=-Gyro_Y*0.03051757;
 	
-	Kalman_Filter(gyro.ACC_Angle,-Gyro_Y*0.03051757);            //调用卡尔曼滤波函数
-	
+	//Kalman_Filter(gyro.ACC_Angle,-Gyro_Y*0.03051757);            //调用卡尔曼滤波函数
+	Kalman_Filter(gyro.ACC_Angle,gyro.Angle_Speed);
+    
 	gyro.Car_Angle = gyro.CarY_Angle_Uncompensation + 4.172;//+angle_speed_Compensation/4.0;
 	//速度補償
 	// for(uint8 i = 19;i>0;i--)
 	//   gyro.carAngleErr[i] =  gyro.carAngleErr[i-1];
 	// gyro.carAngleErr[0] = gyro.Car_Angle;
 	
-	gyro.Turn_Speed= Gyro_X*ratio_gyro/1.56; 
-	
+	//gyro.Turn_Speed= Gyro_X*ratio_gyro/cos(gyro.Car_Angle*0.01745329)/1.583; 
+	gyro.Turn_Speed= Gyro_X*ratio_gyro/1.583; 
 	gyro.CarY_Angle = gyro.Gravity_Angle;
 	
 	if(//环角度积分  
@@ -63,8 +64,7 @@ void Get_Attitude()
 		||  Findline.Process == Left_Roundabout_IN || Findline.Process == Left_Roundabout_OUT  )
 		   ||  (Findline.Process ==  Crossmeeting && crossmeet.PostureIntegral == 1)
 			   ||  (Findline.Process ==  Transome && transome.PostureIntegral == 1 )//会车角度积分
-//				||1
-                             )
+				   )
 	{
 		gyro.TurnAngle_Integral += gyro.Turn_Speed/1000.0 ;
 	}
@@ -80,7 +80,7 @@ void Get_Attitude()
 //float Q_angle=0.01, Q_gyro=0.003, R_angle=10;
 //float Q_angle=0.001, Q_gyro=0.1, R_angle=10;
 //float Q_angle=0.01, Q_gyro=0.1, R_angle=10;
-static  float Q_angle=0.001, Q_gyro=0.003, R_angle=300, dt=0.001;
+static  float Q_angle=0.1, Q_gyro=0.003, R_angle=300, dt=0.001;
 	//Q增大，动态响应增大
 static float Pk[2][2] = { {1, 0}, {0, 1 }};
 	

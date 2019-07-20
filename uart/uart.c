@@ -154,28 +154,28 @@ void UART_2_computer (void)
 	static float float_out=0; 
         
 	// 1
-	float_out = sensor.once_uni_ad[EEEL];
+	float_out = Findline.Process;
 	uint2Byte(&float_out,buf12,2);
 	// 2
-        float_out = sensor.once_uni_ad[EEEM];
+    float_out = speedloop.Reality*100;
 	uint2Byte(&float_out,buf12,6);
 	// 3
-	float_out = sensor.once_uni_ad[EEER];
+	float_out = sensor.once_uni_ad[EEEM];
 	uint2Byte(&float_out,buf12,10);
 	// 4
-	float_out = sensor.once_uni_ad[EECL];
+	float_out=Findline.errBuff;
 	uint2Byte(&float_out,buf12,14);
 	// 5
-	float_out = sensor.once_uni_ad[EECR];
+	float_out=speed.Reality*100;
 	uint2Byte(&float_out,buf12,18);
 	// 6
-	float_out = Findline.errBuff;
+	float_out=gyro.TurnAngle_Integral;
 	uint2Byte(&float_out,buf12,22);
 	// 7
-	float_out= steerWloop.Expect/100.0;
+	float_out= speedloop.Intigral*0.1;
 	uint2Byte(&float_out,buf12,26);
 	// 8
-	float_out=steerWloop.Reality/100.0;
+	float_out=sensor.once_uni_ad[EEEM];
 	uint2Byte(&float_out,buf12,30);
 	
 	

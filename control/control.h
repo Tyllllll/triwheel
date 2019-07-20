@@ -50,7 +50,7 @@ extern PID_Parameter steerWloop;
 extern PID_Parameter leftCurrentloop; 
 extern PID_Parameter rightCurrentloop; 
 
-extern float  l_setspeed, r_setspeed,setangle,common_out,differential_out,L_SpeedControlOutUpdata,R_SpeedControlOutUpdata,steerK_p;
+extern float  l_setspeed, r_setspeed,setangle,common_out,differential_out,L_SpeedControlOutUpdata,R_SpeedControlOutUpdata,steerK_p,steerK_d;
 extern uint16 loseflagCounter;
 extern float Diff_speed;
 

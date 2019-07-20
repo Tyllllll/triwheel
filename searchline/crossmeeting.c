@@ -25,18 +25,19 @@ void crossmeeting()
     {
         crossmeet.Process = 1;
         crossmeet.dejavuflag = 0;
-		if (crossmeet.FinishflagAnother == 0)
-			crossmeet.RunTime = -200;
+        if (crossmeet.FinishflagAnother == 0)
+            crossmeet.RunTime = -crossmeet.SubWaitTime;
+        else
+            crossmeet.RunTime = 0;
 //        crossmeet.FinishflagAnother = 1;
     }
     MidGain = 30/sensor.once_uni_ad[EEEM];
 	if(MidGain > 1.5)
 		MidGain = 1.5;
 	//电磁巡线
-  sensor.error[0] = 0.8*35*((sensor.once_uni_ad[EEER] - sensor.once_uni_ad[EEEL]))*(3.7/(sensor.once_uni_ad[EEER] + sensor.once_uni_ad[EEEL] + 4.5*sensor.once_uni_ad[EEEM]+0.001))
-        + //豎電感
-              0.2*  35*((sensor.once_uni_ad[EECR] - sensor.once_uni_ad[EECL]))*(1/(sensor.once_uni_ad[EECR] + sensor.once_uni_ad[EECL] + 1*sensor.once_uni_ad[EEEM] +0.001));
-        sensor.error[0] = sensor.error[0]*MidGain;
+	sensor.error[0] = 35*((sensor.once_uni_ad[EEER] - sensor.once_uni_ad[EEEL]))*
+        (4.7/(sensor.once_uni_ad[EEER] + sensor.once_uni_ad[EEEL] + 1.3*sensor.once_uni_ad[EEEM]+0.001));
+	sensor.error[0] = sensor.error[0]*MidGain;
 
 	if(crossmeet.Mode == 1) //crossmeet.Mode == 1 掉头
 	{
@@ -47,11 +48,7 @@ void crossmeeting()
 				crossmeet.RunTime--;
 		}
 		else if(crossmeet.RunTime >= 0)
-		{
 			crossmeet.RunTime--;
-			if (crossmeet.RunTime == -32768)
-				crossmeet.RunTime++;
-		}
 		switch (crossmeet.Process)
 		{
 			//姿态调整段
@@ -69,7 +66,7 @@ void crossmeeting()
 			Findline.errBuff = sensor.error[0];
 			crossmeet.dejavuflag = 1;
 			
-			if(fabs(gyro.TurnAngle_Integral) > 170 && fabs(gyro.TurnAngle_Integral) < 190 && fabs(gyro.Turn_Speed) < 5)
+			if( fabs(gyro.TurnAngle_Integral) > 180 )
 				crossmeet.Process = 3,bee.time = 120;
 			break;
 		case 3:
@@ -90,10 +87,15 @@ void crossmeeting()
 			
 		case 4:
 			crossmeet.MeetingSpeed = speed.Stan;
+            Findline.errBuff = sensor.error[0];
 			crossmeet.PostureIntegral = 0;    //角度积分开启     
 			if( Road_or_Unroad() == 1)
 			{
 				crossmeet.Process = 0  ,Findline.Process = Normal, crossmeet.HasCrossMeet = 1, bee.time = 120;
+                if(crossmeet.reverse == 0)
+                    elementArray.elementFinishNum = elementArray.elementNum - 1;
+                else
+                    elementArray.elementFinishNum = 0;
 			}
 			
 			break;
@@ -108,7 +110,6 @@ void crossmeeting()
 			//姿态调整段
 		case 1 :
 			crossmeet.PostureIntegral = 0;    //角度积分关闭
-			crossmeet.MeetingSpeed = speed.Stan;
 			Findline.errBuff = sensor.error[0] ;
 			
 			if( crossmeet.OdometerCount <=0 )
@@ -116,7 +117,6 @@ void crossmeeting()
 			break;
 		case 2 :
 			crossmeet.PostureIntegral = 0;    //角度积分开启  
-			crossmeet.MeetingSpeed = speed.Stan;
 			Findline.errBuff = sensor.error[0] ;   
 			if( Road_or_Unroad() == 1)
 			{

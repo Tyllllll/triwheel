@@ -130,7 +130,7 @@ void transoming()
       transome.PostureIntegral = 1;           
       Findline.errBuff = -10*8.5/steerK_p;//21
       //Findline.err[0] =4*(20 - gyro.TurnAngle_Integral);
-      if(transome.OdometerCount<=0 && gyro.TurnAngle_Integral>65 )//70//50
+      if(transome.OdometerCount<=0 && gyro.TurnAngle_Integral>58 )//70//50
       {
         transome.Process = 5;
         bee.time=200;
@@ -141,7 +141,7 @@ void transoming()
       transome.TransomeSpeed = speed.Stan;
       transome.PostureIntegral = 1;    //角度积分开启          
       Findline.errBuff = gyro.TurnAngle_Integral>5?(21*8.5/steerK_p):0;//>(-gyro.TurnAngle_Integral)?15:0;
-      if( (sensor.Parallel_sum>10 && Road_or_Unroad() == 1 )&& gyro.TurnAngle_Integral<5)
+      if( (sensor.Parallel_sum>10 && Road_or_Unroad() == 1 )&& gyro.TurnAngle_Integral<15)
       {          
         //            transome.Process = 7;
         //          bee.time=200;

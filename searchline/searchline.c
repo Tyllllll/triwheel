@@ -12,11 +12,12 @@ float Lamp_Odometer;
 //uint8 LoopArray[5]= {0x00,0x00,0x00,0x00,0x00};
 LOOPARRAY_CLASS loopArray = 
 {
-  {2,2,1,0,0},2,0,//1-左环 2-右环 
+	//  {2,1,0,0,0},1
+	{1,1,1,0,0,0},1//1-小环 2-中环 3-大环
 };
 TRANSOMEORCROSSMEET_CLASS elementArray = 
 {
-	{2,2,2,0,0,0},2//1-横断 2-坡道 
+	{1,1,1,0,0,0},2//1-横断 2-坡道 
 };
 
 LAMP_CLASS lamp;
@@ -29,6 +30,7 @@ void CrossMeetingFind(void);
 void LoopFind(void);
 void CrossFind(void);
 void LampFind(void);
+void Elemental_chain(void);
 
 /****Objects**************************************************/
 
@@ -49,26 +51,41 @@ void caculate_err(void)
 {
 	static int16 i;
 	static float errDeltaMax = 35;
-        
-        float MidGain;
-        MidGain = 30/sensor.once_uni_ad[EEEM];
-        //        环坡削减
-        if(sensor.once_uni_ad[EEEM]>28 && Findline.Process == Normal)
+    
+	float MidGain;
+	MidGain = 30/sensor.once_uni_ad[EEEM];
+    //        环坡削减
+    if(sensor.once_uni_ad[EEEM]>28 && Findline.Process == Normal)
         MidGain = 20/(sensor.once_uni_ad[EEEM]);
-        if(MidGain > 1.5)
-          MidGain = 1.5;
+	if(MidGain > 1.5)
+		MidGain = 1.5;
 	//电磁巡线
-        sensor.error[0] = 0.8*35*((sensor.once_uni_ad[EEER] - sensor.once_uni_ad[EEEL]))*(3.7/(sensor.once_uni_ad[EEER] + sensor.once_uni_ad[EEEL] + 4.5*sensor.once_uni_ad[EEEM]+0.001))
-        + //豎電感
-              0.2*  35*((sensor.once_uni_ad[EECR] - sensor.once_uni_ad[EECL]))*(1/(sensor.once_uni_ad[EECR] + sensor.once_uni_ad[EECL] + 1*sensor.once_uni_ad[EEEM] +0.001));
-        sensor.error[0] = sensor.error[0]*MidGain;
-     
-        Findline.err[0] = sensor.error[0] ;
-        if(!(Findline.Process == Right_Roundabout_OUT || Findline.Process == Left_Roundabout_OUT))
-	for(i=59;i>=1;i--)
-		Findline.err[i]=Findline.err[i-1];
-	//出環
-        if( (Findline.Process == Right_Roundabout_OUT || Findline.Process == Left_Roundabout_OUT )&&fabs(gyro.TurnAngle_Integral)<355 )
+    sensor.error[0] = 0.8*35*((sensor.once_uni_ad[EEER] - sensor.once_uni_ad[EEEL]))*(3.7/(sensor.once_uni_ad[EEER] + sensor.once_uni_ad[EEEL] + 4.5*sensor.once_uni_ad[EEEM]+0.001))
+    + //豎電感
+          0.2*  35*((sensor.once_uni_ad[EECR] - sensor.once_uni_ad[EECL]))*(1/(sensor.once_uni_ad[EECR] + sensor.once_uni_ad[EECL] + 1*sensor.once_uni_ad[EEEM] +0.001));
+    sensor.error[0] = sensor.error[0]*MidGain;
+//	sensor.error[0] = 35*((sensor.once_uni_ad[EEER] - sensor.once_uni_ad[EEEL]))*(4.7/(sensor.once_uni_ad[EEER] + sensor.once_uni_ad[EEEL] + 5*sensor.once_uni_ad[EEEM]+0.001));
+//	sensor.error[0] = sensor.error[0]*MidGain;
+	//环坡削减
+	//        if(sensor.Parallel_sum > 50 &&sensor.once_uni_ad[EEEM] > 30 
+	//           && Findline.Process <= Cross_BothSide
+	//             && Findline.Odometer <= 0)
+	//        Findline.elementflag=1,bee.time==30;
+	if(Findline.elementflag)
+	{
+		sensor.error[0] = sensor.error[0]/(sensor.once_uni_ad[EEEM]-10);
+		led.Set(LED3, LED_ON);
+	}
+	else
+	{          
+		led.Set(LED3, LED_OFF);
+	}
+	Findline.err[0] = sensor.error[0] ;
+	if(!(Findline.Process == Right_Roundabout_OUT || Findline.Process == Left_Roundabout_OUT))
+		for(i=59;i>=1;i--)
+			Findline.err[i]=Findline.err[i-1];
+	
+    if( (Findline.Process == Right_Roundabout_OUT || Findline.Process == Left_Roundabout_OUT )&&fabs(gyro.TurnAngle_Integral)<355 )
 	{
           for(i=1;i<41;i+=1)
             Findline.err[0] += Findline.err[i];
@@ -81,6 +98,7 @@ void caculate_err(void)
           if(Findline.err[0] <-2)
             Findline.err[0] = -2;
 	}
+
 	
 	if(fabs(Findline.err[0]-Findline.err[1])>errDeltaMax )
 	{
@@ -110,20 +128,22 @@ void caculate_err(void)
           
 	}
 	
-        //偏差限幅
-        if(Findline.err[0]>35)Findline.err[0] = 35;
-        if(Findline.err[0]<-35)Findline.err[0] = -35;    
+	//偏差限幅
+	if(Findline.err[0]>35)Findline.err[0] = 35;
+	if(Findline.err[0]<-35)Findline.err[0] = -35;    
 	
-
-        
+	//        Findline.err[0] = 0.15*Findline.err[0] + 0.85*Findline.err[1]  ;
+	
 	Findline.errBuff =  Findline.err[0];
 }
+
+
+
 
 void findline(void)
 {    
 	//障碍判别
-	if(Findline.Process != Stop && Findline.Process <= Cross_BothSide 
-	    )
+	if(Findline.Process != Stop && Findline.Process <= Cross_BothSide)
     {
         if(elementArray.ElementArray[elementArray.elementFinishNum] == 1)
             TransomegFind();
@@ -132,17 +152,16 @@ void findline(void)
     }
 		
 	
-	//断路判别
-	if( Findline.Odometer <= 0 && Findline.Process != Stop && Findline.Process <= Cross_BothSide )
-    {
-        CrossMeetingFind();
-	}
+//	//断路判别
+//	if( Findline.Odometer <= 0 && Findline.Process != Stop && Findline.Process <= Cross_BothSide )
+//    {
+//        CrossMeetingFind();
+//	}
     
 	//坡道判别
 	if( Findline.Odometer <= 0 && Findline.Process != Stop
 	   && elementArray.ElementArray[elementArray.elementFinishNum] == 2)
     {
-		//if(speed.Distance_cnt > 5)
             LampFind();
 	}
 	//环识别与补线
@@ -167,7 +186,7 @@ void TransomegFind()
 					   && (Findline.Process == Normal|| Findline.Process == Straight ))
 	{
 		straightCounter++;
-		if(straightCounter>5 && laser.LaserDistanse[0]<=1 && laser.LaserDistanse[0] >= 0.4
+		if(straightCounter>5 && laser.LaserDistanse[0]<=0.9 && laser.LaserDistanse[0] >= 0.4
 		   )
 		{
 			Findline.Process = Transome;
@@ -197,7 +216,7 @@ void TransomegFind2(void)
 		   )
 		{
 			Findline.Process = Transome;
-			transome.OdometerCount = 0.25;
+			transome.OdometerCount = 0.28;
 			bee.time = 200;
 			transome.Stopflag = 1;
 			Findline.elementflag = 0;
@@ -233,89 +252,52 @@ void CrossMeetingFind()
 	else
 		crossmeetingCounter = 0;
 }
-float AngleSpeed_Filter;
+
 /******************************坡道判定**************************************/ 
 void LampFind()
 {
-//	static uint16 t;
-//	sensorSum = sqrt(sensor.once_uni_ad[EEEL]*sensor.once_uni_ad[EEEL] + sensor.once_uni_ad[EEEM]*sensor.once_uni_ad[EEEM] + sensor.once_uni_ad[EEER]*sensor.once_uni_ad[EEER]);
-//	if(     
-//	   sensor.once_uni_ad[EEEM] > 29
-//		   && laser.LaserDistanse[0] < 0.6
-//			   && laser.LaserDistanse[10] < 1.0
-//				   && !Findline.loseflag
-//					   && (Findline.Process == Normal|| Findline.Process == Straight ))
-//	{
-//		if(Findline.Process != Lamp &&  Findline.Process != Lamp_D) //逻辑上为0
-//		{
-//			Findline.Process = Lamp;
-//			t=0;
-//			bee.time = 240 ;       
-//			Findline.Odometer = 0.8;  //不进LampFind函数
-//			Findline.elementflag = 0;
-//		}
-//		
-//	}
-//	if(Findline.Process == Lamp && t>4
-//	   )
-//	{
-//		
-//		Findline.Process = Lamp_D;
-//		bee.time = 240 ;
-//		Findline.Odometer = 1.2;//0.9
-//		t=0;  
-//	}
-//	
-//	if(Findline.Process == Lamp_D || Findline.Process == Lamp )//&& speed.Reality <1.8)
-//		t++;
-//	if(Findline.Process == Lamp_D && t>4)
-//	{
-//		Findline.Odometer = 0.8;
-//		Findline.Process = Normal;
-//		bee.time = 240 ;
-//		elementArray.elementFinishNum++;
-//		if(elementArray.elementFinishNum>elementArray.elementNum)
-//			elementArray.elementFinishNum = 0;
-//		
-//	}
-    static uint16 straightCounter;
-    static int16 Lamp_size;
-    static float AngleSpeed_Buff[3];
-  //  static float AngleSpeed_Filter;
+//    static uint16 straightCounter;
+    static float AngleSpeed_Buff[10];
+    static float AngleSpeed_Integral;
     /*---------------抬头角速度滤波---------------*/
-    for(uint8 i = 2; i > 0; i--)
+    for(uint8 i = 9; i > 0; i--)
     {
         AngleSpeed_Buff[i] = AngleSpeed_Buff[i-1];
     }
     AngleSpeed_Buff[0] = gyro.Angle_Speed;
-    AngleSpeed_Filter = (AngleSpeed_Buff[0] + AngleSpeed_Buff[1] + AngleSpeed_Buff[2]) / 3;
-    /*---------------判定直道---------------*/
-    if(fabs(Findline.errBuff) <= 4
-        && fabs(gyro.Turn_Speed) <= 2 
-          && speed.Reality >=1.0
-              && !Findline.loseflag
-                  && (Findline.Process == Normal|| Findline.Process == Straight ))
+    AngleSpeed_Integral = 0;
+    for(uint8 i = 9; i > 0; i--)
     {
-        straightCounter++;    
+        AngleSpeed_Integral += AngleSpeed_Buff[i] * AngleSpeed_Buff[i];
     }
-    else
-    {
-        straightCounter = 0;
-    }
+    AngleSpeed_Integral = sqrt(AngleSpeed_Integral/10);
+//    /*---------------判定直道---------------*/
+//    if(fabs(Findline.errBuff) <= 4
+//        && fabs(gyro.Turn_Speed) <= 2 
+//          && speed.Reality >=1.0
+//              && !Findline.loseflag
+//                  && (Findline.Process == Normal|| Findline.Process == Straight ))
+//    {
+//        straightCounter++;    
+//    }
+//    else
+//    {
+//        straightCounter = 0;
+//    }
     /*-------------- 判坡----------------*/
 	if(Findline.Process <= Cross_BothSide )
     {
-        if(sensor.once_uni_ad[EEEM] > 20 && sensor.once_uni_ad[EEEM] < 28 
-           && straightCounter >= 5
-               &&  AngleSpeed_Filter > 100
-                    && gyro.Car_Angle > 10
+        if(sensor.once_uni_ad[EEEM] > 20
+           //&& straightCounter >= 5
+           && laser.LaserDistanse[0] > 0.5
+            &&speed.Reality >=1.0
+               &&  AngleSpeed_Integral > 70
                         && (Findline.Process == Normal|| Findline.Process == Straight ))
             {
                 Findline.Process = Lamp;
                 bee.time = 240 ;       
                 Lamp_Odometer = 1.5;
                 Findline.elementflag = 0;
-                Lamp_size = gyro.Angle_Speed;
             }
     }
     if(Findline.Process == Lamp)  //判定下坡
@@ -340,9 +322,6 @@ void LampFind()
             Findline.Process = Normal;
             bee.time = 240 ;
             Elemental_chain();
-//            elementArray.elementFinishNum++;
-//            if(elementArray.elementFinishNum>elementArray.elementNum)
-//                elementArray.elementFinishNum = 0;
         }
     }
 	
@@ -357,35 +336,52 @@ void LoopFind()
 	
 	
 	//判定入环位
-	if( sensor.once_uni_ad[EEEM]>50 
+	if( sensor.once_uni_ad[EEEM]>40 
 	   //     && sensor.once_uni_ad[EEEM]<80 
 	   //     && sensor.ad_mid_dif[0]<0
 	   && sensor.Parallel_sum>60
 		   && !Findline.loseflag
 			   )
+		/*略晚，不灵活，手动
+		sensor.once_uni_ad[EECL] > 12
+		&& sensor.once_uni_ad[EECR] <4
+		&& sensor.once_uni_ad[EEEL] >20*/
+		/*可以自动入，不对称，留
+		sensor.once_uni_ad[EECL] < 9
+		&& sensor.once_uni_ad[EECR] <4
+		&& sensor.once_uni_ad[EEEL] <6
+		&& sensor.once_uni_ad[EEER] >28
+		
+            
+		sensor.once_uni_ad[EECL] < 9
+		&& sensor.once_uni_ad[EECR] <9
+		&& sensor.once_uni_ad[EEER] <14
+		&& sensor.once_uni_ad[EEEL] >20*/
 	{
 		//    bee.time=50;
-          if(
-//             sensor.once_uni_ad[EEEM]>0.5*(sensor.once_uni_ad[EEER] +sensor.once_uni_ad[EEEL] )
-                fabs(sensor.once_uni_ad[EEEL] - sensor.once_uni_ad[EEER] )<2 
-                 && sensor.once_uni_ad[EECL] > sensor.once_uni_ad[EECR]
-                   && loopArray.LoopArray[loopArray.loopFinishNum] == 1
-                     )
-          {
-            Findline.Process = Left_Roundabout_IN;
-            Findline.elementflag = 0;
-          }
-          if(
-//             sensor.once_uni_ad[EEEM]>0.5*(sensor.once_uni_ad[EEER] +sensor.once_uni_ad[EEEL] )
-               fabs(sensor.once_uni_ad[EEEL] - sensor.once_uni_ad[EEER] )<2 
-                 && sensor.once_uni_ad[EECL] < sensor.once_uni_ad[EECR]
-                   && loopArray.LoopArray[loopArray.loopFinishNum] == 2
-                     )
-            
-          {      
-            Findline.Process = Right_Roundabout_IN;
-            Findline.elementflag = 0;
-          }
+		if(
+		   sensor.once_uni_ad[EEEM]>50
+			   && fabs(sensor.once_uni_ad[EEEL] - sensor.once_uni_ad[EEER])<3.5
+				   && Findline.err[5] > 0
+					   && Findline.Process != Left_Roundabout_IN
+						   && Findline.Process != Right_Roundabout_IN
+							   )
+		{
+			Findline.Process = Left_Roundabout_IN;
+			Findline.elementflag = 0;
+		}
+		if(
+		   sensor.once_uni_ad[EEEM]>50
+			   && fabs(sensor.once_uni_ad[EEEL] - sensor.once_uni_ad[EEER])<3.5 
+				   && Findline.err[5] < 0
+					   && Findline.Process != Right_Roundabout_IN
+						   && Findline.Process != Left_Roundabout_IN
+							   )
+			
+		{      
+			Findline.Process = Right_Roundabout_IN;
+			Findline.elementflag = 0;
+		}
 		
 	}
 	
@@ -414,7 +410,6 @@ void LoopFind()
 		Findline.Odometer = 1.0;
 		Findline.loopOdometerflag = 0;
 		loopArray.loopFinishNum++;
-		bee.time = 200;
 		
 	}
 	if((Findline.Process == Left_Roundabout_OUT || Findline.Process == Right_Roundabout_OUT ) 
@@ -444,7 +439,7 @@ void Elemental_chain(void)
                 elementArray.elementFinishNum = elementArray.elementNum-1;
         }
     }
-    else
+    else        //反向发车
     {
         if(crossmeet.HasCrossMeet == 0) 
         {

@@ -8,11 +8,13 @@ typedef struct
 	float PostureIntegral;
 	float MeetingSpeed;
 	float DriftErr;
+   // float AddWaitTime;                 //等待加时  单位：秒
 	uint8 FinishflagMy;
 	uint8 FinishflagAnother;            //1-另一辆车到达断路 或 完蛋了
 	uint8 Mode;
 	uint8 dejavuflag;
 	int16 RunTime;
+    int16 SubWaitTime;
     uint8 Process;
     uint8 HasCrossMeet;                 //1-会车结束                         
     uint8 reverse;                      //0-正向发车  1-反向发车

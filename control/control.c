@@ -42,7 +42,7 @@ void PIDInit()
 {
   //速度环
     speedloop.Kp=1200;//1200
-    speedloop.Ki=100;//100
+	speedloop.Ki=100;//0.1
     speedloop.Kd=0;
     speedloop.dt=1;
   //方向环  
@@ -50,12 +50,12 @@ void PIDInit()
     steerloop.Ki=0;
     steerloop.Kd=0;//30
     steerloop.dt=1;
-    steerK_p= 10;//6.6
-    steerK_d= 11;//4.5//28
+    steerK_p= 10;//4.2
+    steerK_d= 12;//12
     KpGain = 1.5;//1.4;
-    FxMax = 5500;//4800;//2最大向心力限制
+    FxMax = 6000;//4800;//2最大向心力限制
   //方向角速度环
-    steerWloop.Kp=10.0;//3.9//7//8
+    steerWloop.Kp=10;//3.9//7//8  //5
     steerWloop.Ki=0;
     steerWloop.Kd=50;//22;//100;0;//
     steerWloop.dt=1;
@@ -74,7 +74,7 @@ void PIDInit()
 
 void SpeedInit()
 {
-	speed.Stan= 2.5;//2.7;
+	speed.Stan = 2.5;
 	Findline.loseflag = 1;
 	
 	speed.L_Bigeest=9500;
@@ -105,7 +105,7 @@ void SpeedLoop()
 {
 	if(timer%10==0)
 	{
-		// ;//
+		// 0.8*speed.Stan + 0.2*speed.Stan*(35-fabs(Findline.errBuff))/35.0;//
 		switch (Findline.Process)
 		{
 		case Crossmeeting:
@@ -115,17 +115,104 @@ void SpeedLoop()
             speedloop.Expect = transome.TransomeSpeed;
             break;
 		default:
-			speedloop.Expect = speed.Stan;//0.8*speed.Stan + 0.2*speed.Stan*(35-fabs(Findline.errBuff))/35.0;//
+			speedloop.Expect = speed.Stan;
 			break;
 		}
-		speedloop.Reality = speed.Reality;
-		//电机输出
-                if(speedloop.Intigral > 500 && speedloop.NowError<0)
-                speedloop.Intigral = 0;
-                if(speedloop.Intigral < -500 && speedloop.NowError>0)
-                speedloop.Intigral = 0;
+//		speedloop.Reality = speed.Reality;
+//		//电机输出
+//		common_out = PID_Controler(&speedloop);
+        
+        
+        speedloop.Reality = speed.Reality;
+        //电机输出
+        if(speedloop.Intigral > 500 && speedloop.NowError<0)
+        speedloop.Intigral = 0;
+        if(speedloop.Intigral < -500 && speedloop.NowError>0)
+        speedloop.Intigral = 0;
+        if(Findline.Process == Transome || Findline.Process == Left_Roundabout_IN || Findline.Process == Right_Roundabout_IN)
+        {
+            //integral_separation = 0;
+            speedloop.Intigral = 0;
+        }
 		common_out = PID_Controler(&speedloop);
-		if(common_out>250)common_out=250;
+        
+//    uint8 integral_separation;
+//	int16 umax = 3;
+//	int16 umin = -2;
+//	
+//	speedloop.Reality = speed.Reality;
+//	speedloop.LastError = speedloop.NowError;
+//	speedloop.NowError = (speedloop.Expect - speedloop.Reality);
+//	// 积分分离加积分抗饱和
+//	if (speedloop.Intigral > umax)
+//	{
+//		if (fabs(speedloop.NowError > 0.3))
+//		{
+//			integral_separation = 0;
+//		}
+//		else
+//		{
+//            integral_separation = 1;
+//			if (speedloop.NowError < 0)
+//			{
+//				speedloop.Intigral += speedloop.NowError;
+//			}
+//		}
+//	}
+//	else if (speedloop.Intigral < umin)
+//	{
+//		if (fabs(speedloop.NowError > 0.3))
+//		{
+//			integral_separation = 0;
+//		}
+//		else
+//		{
+//			integral_separation = 1;
+//			if (speedloop.NowError > 0)
+//			{
+//				speedloop.Intigral += speedloop.NowError;
+//			}
+//		}
+//	}
+//	else
+//	{
+//		if (fabs(speedloop.NowError) > 0.3)
+//		{
+//			integral_separation = 0;
+//		}
+//		else
+//		{
+//			integral_separation = 1;
+//			speedloop.Intigral += speedloop.NowError;
+//		}
+//	}
+	
+//	// 减速积分退保和
+//	if (speedloop.NowError < -0.2)
+//	{
+//		if (speedloop.NowError < -0.8)
+//		{
+//			speedloop.Intigral *= 0.1;
+//		}
+//		else if (speedloop.NowError < -0.6)
+//		{
+//			speedloop.Intigral *= 0.2;
+//		}
+//		else if (speedloop.NowError < -0.4)
+//		{
+//			speedloop.Intigral *= 0.45;
+//		}
+//		else
+//		{
+//			speedloop.Intigral *= 0.65;
+//		}
+//	}
+	 //输出
+
+//	common_out = speedloop.Kp * speedloop.NowError + integral_separation * speedloop.Ki * speedloop.Intigral;        
+        
+        
+		if(common_out>250) common_out=250;
 	}
 }
 
@@ -144,7 +231,6 @@ void SteeringLoop()
 			speedParam = 0.1;
 		if(speedParam>4)
 			speedParam=4;
-//			speedParam=2;
 		steerloop.Kp = steerK_p 
 			*speedParam
 				*KpGain;
@@ -155,12 +241,10 @@ void SteeringLoop()
 	if(fabs(deltaErr) > 20)
 		deltaErr = deltaErr > 0 ? 20:-20;
         
-//	if(deltaErr * Findline.errBuff > 0 ) 
-		steerWloop.Expect = PID_Controler(&steerloop) - steerK_d * deltaErr * speedParam / 100.0;//1500;//
-//                if(steerWloop.Expect > 500 ) steerWloop.Expect = 500;
-//                if(steerWloop.Expect < -500 )steerWloop.Expect = -500;
-//	else
-//		steerWloop.Expect = PID_Controler(&steerloop) - steerK_d * deltaErr * speedParam / 100.0/2; 
+	if(deltaErr * Findline.errBuff > 0 ) 
+		steerWloop.Expect = PID_Controler(&steerloop) - steerK_d * deltaErr * speedParam / 100.0;
+	else
+		steerWloop.Expect = PID_Controler(&steerloop) - steerK_d * deltaErr * speedParam / 100.0/2; 
     
     static float lastWReality[8],WRealErr; 
 	for(uint8 i = 7;i > 0; i--)
@@ -172,8 +256,7 @@ void SteeringLoop()
 	differential_out = PID_Controler(&steerWloop);// -1*steerWloop.Reality ;
 	
 	static float FxMaxOut;
-	FxMaxOut = 900; //FxMax / (speed.Reality * speed.Reality + 0.0001);
-        
+	FxMaxOut = FxMax / (speed.Reality * speed.Reality + 0.0001);
 	if(differential_out>FxMaxOut)
         differential_out=FxMaxOut;
 	if(differential_out<-FxMaxOut)
@@ -182,35 +265,35 @@ void SteeringLoop()
 
 void CurrentLoop()
 {
-	static int currentOffSetLeft = 3135,
-	currentOffSetRight = 3138;
+	static int currentOffSetLeft = 3105,
+	currentOffSetRight = 3133;
 	
 	CurrentLoopSimple();//电流采样
-	if(Findline.Process == Transome && transome.Shuaaaaflag == 1)
-	{            
-		//左电机速度更新
-		leftCurrentloop.Expect =  2*(gyro.TurnAngle_Integral + 45);  // 00;//        
-		leftCurrentloop.Reality = -((fabs(sensor.advalue.ad_avr_val[1]-currentOffSetLeft)>5)?(sensor.advalue.ad_avr_val[1]-currentOffSetLeft):0) ;//leftCurrentloop.Intigral ;//             
-		L_SpeedControlOutUpdata = PID_Controler(&leftCurrentloop); 
-		
-		//右电机速度更新
-		rightCurrentloop.Expect = 0;  //400;//
-		rightCurrentloop.Reality = ((fabs(sensor.advalue.ad_avr_val[0]-currentOffSetRight)>5)?(sensor.advalue.ad_avr_val[0]-currentOffSetRight):0) ; //rightCurrentloop.Intigral ;//       
-		R_SpeedControlOutUpdata = PID_Controler(&rightCurrentloop);
-		
+        if(Findline.Process == Transome && transome.Shuaaaaflag == 1)
+        {            
+          //左电机速度更新
+          leftCurrentloop.Expect =  2*(gyro.TurnAngle_Integral + 45);  // 00;//        
+          leftCurrentloop.Reality = -((fabs(sensor.advalue.ad_avr_val[0]-currentOffSetLeft)>5)?(sensor.advalue.ad_avr_val[0]-currentOffSetLeft):0) ;//leftCurrentloop.Intigral ;//             
+          L_SpeedControlOutUpdata = PID_Controler(&leftCurrentloop); 
+          
+          //右电机速度更新
+          rightCurrentloop.Expect = 0;  //400;//
+          rightCurrentloop.Reality = ((fabs(sensor.advalue.ad_avr_val[1]-currentOffSetRight)>5)?(sensor.advalue.ad_avr_val[1]-currentOffSetRight):0) ; //rightCurrentloop.Intigral ;//       
+          R_SpeedControlOutUpdata = PID_Controler(&rightCurrentloop); 
+          
 	}
-	else
+        else
 	{
-		//左电机速度更新
-		leftCurrentloop.Expect = common_out - 1*differential_out; //-800;//    00;//        
-		leftCurrentloop.Reality = ((fabs(sensor.advalue.ad_avr_val[1]-currentOffSetLeft)>5)?(sensor.advalue.ad_avr_val[1]-currentOffSetLeft):0) ;//leftCurrentloop.Intigral ;//             
-		L_SpeedControlOutUpdata = PID_Controler(&leftCurrentloop); // 9999;//
-		
-		//右电机速度更新
-		rightCurrentloop.Expect = common_out + 1*differential_out; //0;//400;//
-		rightCurrentloop.Reality = -((fabs(sensor.advalue.ad_avr_val[0]-currentOffSetRight)>5)?(sensor.advalue.ad_avr_val[0]-currentOffSetRight):0) ; //rightCurrentloop.Intigral ;//       
-		R_SpeedControlOutUpdata = PID_Controler(&rightCurrentloop); //
-		
+          //左电机速度更新
+          leftCurrentloop.Expect = common_out - 1*differential_out; //    00;//        
+          leftCurrentloop.Reality = ((fabs(sensor.advalue.ad_avr_val[1]-currentOffSetLeft)>5)?(sensor.advalue.ad_avr_val[1]-currentOffSetLeft):0) ;//leftCurrentloop.Intigral ;//             
+          L_SpeedControlOutUpdata = PID_Controler(&leftCurrentloop); 
+          
+          //右电机速度更新
+          rightCurrentloop.Expect = common_out + 1*differential_out; //400;//
+          rightCurrentloop.Reality = -((fabs(sensor.advalue.ad_avr_val[0]-currentOffSetRight)>5)?(sensor.advalue.ad_avr_val[0]-currentOffSetRight):0) ; //rightCurrentloop.Intigral ;//       
+          R_SpeedControlOutUpdata = PID_Controler(&rightCurrentloop); 
+          
 	}
 	
 }
@@ -279,7 +362,7 @@ void MotorControl(float* err)
 	   (sensor.advalue.ad_avr_val[EEEL] + sensor.advalue.ad_avr_val[EEEM] + sensor.advalue.ad_avr_val[EEER]  <= 350
 		//             || (Findline.Process == Lamp_D && fabs(gyro.Car_Angle)>44)
 		|| !ui.startbutton_flag || motor.crazyRunCounter>=100 )
-		   && Findline.Process <= Transome_or_Crossmeeting
+		   && Findline.Process <= Lamp_D
 			   )
 	{
 		loseflagCounter++;
@@ -294,39 +377,39 @@ void MotorControl(float* err)
 		loseflagCounter=0;
 	}
 	
+//	if (Findline.Process == Crossmeeting && crossmeet.dejavuflag == 1)
+//	{
+//		L_SpeedControlOutUpdata =  5500 * (1  - fabs(gyro.TurnAngle_Integral) * fabs(gyro.TurnAngle_Integral) / 180 / 180);
+//		R_SpeedControlOutUpdata =  -5500 * (1 - fabs(gyro.TurnAngle_Integral) * fabs(gyro.TurnAngle_Integral) / 180 / 180);
+//	}
+//	else if (Findline.Process == Crossmeeting && crossmeet.dejavuflag == 2)
+//	{
+//		L_SpeedControlOutUpdata =  Findline.errBuff * 85;
+//		R_SpeedControlOutUpdata =  -Findline.errBuff * 85;
+//	}
 	if(Findline.Process == Crossmeeting && crossmeet.dejavuflag == 1)
 	{            
 		//左电机速度更新
-		L_SpeedControlOutUpdata = -40*4*(-gyro.TurnAngle_Integral + 180); //    00;//
+		L_SpeedControlOutUpdata = -60*4*(-gyro.TurnAngle_Integral + 180); //    00;//
 		if(L_SpeedControlOutUpdata <-4000) L_SpeedControlOutUpdata = -4000;  
 		if(L_SpeedControlOutUpdata > 4000) L_SpeedControlOutUpdata = 4000;
 		
 		//右电机速度更新
-		R_SpeedControlOutUpdata = 40*4*(-gyro.TurnAngle_Integral + 180);
+		R_SpeedControlOutUpdata = 60*4*(-gyro.TurnAngle_Integral + 180);
 		if(R_SpeedControlOutUpdata <-4000) R_SpeedControlOutUpdata = -4000;
 		if(R_SpeedControlOutUpdata > 4000) R_SpeedControlOutUpdata = 4000;
 	}
-//	else if(Findline.Process == Crossmeeting && crossmeet.dejavuflag == 2)
-//	{
-//		//左电机速度更新
-//		L_SpeedControlOutUpdata = -60*4*(-gyro.TurnAngle_Integral + 180); //    00;//
-//		if(L_SpeedControlOutUpdata <-4000) L_SpeedControlOutUpdata = -4000;  
-//		if(L_SpeedControlOutUpdata > 4000) L_SpeedControlOutUpdata = 4000;
-//		
-//		//右电机速度更新
-//		R_SpeedControlOutUpdata = 60*4*(-gyro.TurnAngle_Integral + 180);
-//		if(R_SpeedControlOutUpdata <-4000) R_SpeedControlOutUpdata = -4000;
-//		if(R_SpeedControlOutUpdata > 4000) R_SpeedControlOutUpdata = 4000;  
-//	}
-//	if (Findline.Process == Crossmeeting && crossmeet.dejavuflag == 1)
-//	{
-//		L_SpeedControlOutUpdata =  5500 * (1  - fabs(gyro.TurnAngle_Integral) / 180);
-//		R_SpeedControlOutUpdata =  -5500 * (1 - fabs(gyro.TurnAngle_Integral) / 180);
-//	}
-	else if (Findline.Process == Crossmeeting && crossmeet.dejavuflag == 2)
+	else if(Findline.Process == Crossmeeting && crossmeet.dejavuflag == 2)
 	{
-		L_SpeedControlOutUpdata =  sensor.error[0] * 500;
-		R_SpeedControlOutUpdata =  -sensor.error[0] * 500;
+		//左电机速度更新
+		L_SpeedControlOutUpdata = -60*4*(-gyro.TurnAngle_Integral + 180); //    00;//
+		if(L_SpeedControlOutUpdata <-4000) L_SpeedControlOutUpdata = -4000;  
+		if(L_SpeedControlOutUpdata > 4000) L_SpeedControlOutUpdata = 4000;
+		
+		//右电机速度更新
+		R_SpeedControlOutUpdata = 60*4*(-gyro.TurnAngle_Integral + 180);
+		if(R_SpeedControlOutUpdata <-4000) R_SpeedControlOutUpdata = -4000;
+		if(R_SpeedControlOutUpdata > 4000) R_SpeedControlOutUpdata = 4000;  
 	}
 	
 	if (crossmeet.dejavuflag == 0)
@@ -341,7 +424,7 @@ void MotorControl(float* err)
 		MotorPwm[0] =(int16)(R_SpeedControlOutUpdata>speed.R_Bigeest?speed.R_Bigeest:R_SpeedControlOutUpdata);
 		MotorPwm[1] = 0;
 	}
-	if(R_SpeedControlOutUpdata<0)
+	if(R_SpeedControlOutUpdata<0)   
 	{
 		MotorPwm[0] =0;
 		MotorPwm[1] =(int16)(-R_SpeedControlOutUpdata>speed.R_Bigeest?speed.R_Bigeest:-R_SpeedControlOutUpdata);

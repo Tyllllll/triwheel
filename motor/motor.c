@@ -162,6 +162,6 @@ void MotorPwmFlash(int16* PWM)
 	ftm_pwm_duty(ftm0, ftm_ch7, PWM[3]);// ×ó·´
 //	ftm_pwm_duty(ftm0, ftm_ch4, 2000);
 //	ftm_pwm_duty(ftm0, ftm_ch5, 0);
-//	ftm_pwm_duty(ftm0, ftm_ch6, 2000);
+//	ftm_pwm_duty(ftm0, ftm_ch6, 0);
 //	ftm_pwm_duty(ftm0, ftm_ch7, 0);
 }

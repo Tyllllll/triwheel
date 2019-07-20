@@ -23,9 +23,10 @@ uint8 switch_mode,debugTime;
 void main (void)
 {
 	get_clk();
+//	Camera_Init();
 	
 	DisableInterrupts;
-	UART_Init();	
+	UART_Init();
 	spi.SPI_Init();
 	oled.Init();
 	keys.Init();

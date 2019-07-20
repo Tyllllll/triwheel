@@ -81,31 +81,30 @@ void UI_Disp(void)
 			// °´¼ü·¢³µ
 			case 0:
                 bee.time = 200;
-                systick_delay_ms(1000);
+                systick_delay_ms(300);
                 ui.level = 1;
-                ui.startbutton_flag = 1;
+                ui.startbutton_flag = !ui.startbutton_flag;
                 ui.areYouReady = 0;
 
-                Findline.Process = Normal;
+                Findline.Process = ui.startbutton_flag==1?Normal:Stop;
                 crossmeet.HasCrossMeet = 0;
                 Findline.loseflag = 0;
-                //speed.distance = 5;
+                //speed.distance = 20;
                 speed.Distance_cnt = 0;
                 Findline.err[0] = 0;
                 Findline.Odometer = 0;
                 motor.crazyRunCounter = 0;
                 
                 loopArray.loopFinishNum = 0;
-                
+                elementArray.elementNum = 0;
                 for(int8 i = 0; i < 6; i++)
                 {
                     if(elementArray.ElementArray[i] == 0)
                     {
-                        elementArray.elementNum = i+1;
                         break;
                     }
                     else
-                        elementArray.elementNum = 6;
+                        elementArray.elementNum++;
                 }
                 if(crossmeet.reverse == 0)
                     elementArray.elementFinishNum = 0;
@@ -169,8 +168,8 @@ void DispImg(void)
 			oled.Printf(81, i, UI_Image[i]);
 		oled.PrintCharValue(108,1,(uint8)ui.fps_timer_counter[0]);
 		oled.Printf(81,3,UI_RoadElement[Findline.Process]);
-		oled.PrintFloatValue(81,5,gyro.Car_Angle);
-		oled.PrintFloatValue(81,7,elementArray.elementFinishNum);
+		oled.PrintFloatValue(81,5,laser.LaserDistanse[0]);
+		oled.PrintFloatValue(81,7,elementArray.ElementArray[elementArray.elementFinishNum]);
 //		oled.PrintFloatValue(81,7,gyro.Car_Angle);
 	}
 }
@@ -191,8 +190,8 @@ void DispAD(void)
 void DispGyro(void)
 {
 	UI_DispUIStrings(UI_Gryo);
-	oled.PrintFloatValue(75,2, gyro.Car_Angle);
-	oled.PrintFloatValue(75,3, gyro.TurnAngle_Integral);
+	oled.PrintFloatValue(90,2, gyro.Car_Angle);
+	oled.PrintFloatValue(90,3, gyro.TurnAngle_Integral);
 }
 
 void DispOther(void)
@@ -237,7 +236,15 @@ void Parameter_Setting_Init(void)
         elementArray.ElementArray[2] = (int8)EEPROMData[11];
         elementArray.ElementArray[3] = (int8)EEPROMData[12];
         elementArray.ElementArray[4] = (int8)EEPROMData[13];
-        elementArray.ElementArray[5] = (int8)EEPROMData[14];     
+        elementArray.ElementArray[5] = (int8)EEPROMData[14];
+        
+        crossmeet.SubWaitTime = (int16)EEPROMData[15];
+        speed.Stan = (float)EEPROMData[16];
+        steerK_p = (float)EEPROMData[17];
+        steerK_d = (float)EEPROMData[18];
+        steerWloop.Kp = (float)EEPROMData[19];
+        steerWloop.Kd = (float)EEPROMData[20];
+        
         
 		sensor.advalue.ad_offset_val[EEEL] = (uint16)EEPROMData[55];
 		sensor.advalue.ad_offset_val[EEEM] = (uint16)EEPROMData[56];
@@ -251,7 +258,7 @@ void Parameter_Setting_Init(void)
 		sensor.advalue.ad_max_val[EECR] = (uint16)EEPROMData[64];
 	}
 	
-	sprintf(setting.string[0][0], "Loop 1Left 2Right");
+	sprintf(setting.string[0][0], "Loop 1S 2M 3L");
 	sprintf(setting.string[0][1], "Num");
 	setting.data[0][1] = (float32)loopArray.loopNum;
 	sprintf(setting.string[0][2], "1");
@@ -282,7 +289,21 @@ void Parameter_Setting_Init(void)
 	setting.data[1][6] = (float32)elementArray.ElementArray[4];
 	sprintf(setting.string[1][7], "6");
 	setting.data[1][7] = (float32)elementArray.ElementArray[5];
-	
+    
+	sprintf(setting.string[2][0], "OTHER");
+    sprintf(setting.string[2][1], "SubTime");
+	setting.data[2][1] = (float32)crossmeet.SubWaitTime;
+    sprintf(setting.string[2][2], "V_Stan");
+	setting.data[2][2] = (float32)speed.Stan;
+    sprintf(setting.string[2][3], "sK_p");
+	setting.data[2][3] = (float32)steerK_p;
+    sprintf(setting.string[2][4], "sK_d");
+	setting.data[2][4] = (float32)steerK_d;
+    sprintf(setting.string[2][5], "sWK_p");
+	setting.data[2][5] = (float32)steerWloop.Kp;
+    sprintf(setting.string[2][6], "sWK_d");
+	setting.data[2][6] = (float32)steerWloop.Kd;
+    
 //	sprintf(setting.string[1][0], "MOTOR");
 //	sprintf(setting.string[1][1], "kp");
 //	setting.data[1][1] = (float32)MotorPID.P;
@@ -299,9 +320,7 @@ void Parameter_Setting_Init(void)
 //    sprintf(setting.string[1][7], "Vzhi");
 //	setting.data[1][7] = (float32)speed.straight;
 //	
-//	sprintf(setting.string[2][0], "OTHER");
-//    sprintf(setting.string[2][1], "Dis");
-//	setting.data[2][1] = (float32)Distance_Test;
+
 }
 
 void Save_Data(void)
@@ -322,6 +341,15 @@ void Save_Data(void)
 	elementArray.ElementArray[4] = (int8)setting.data[1][6];
 	elementArray.ElementArray[5] = (int8)setting.data[1][7];
 	
+    
+    
+    
+    crossmeet.SubWaitTime = (int16)setting.data[2][1];
+    speed.Stan = (float)setting.data[2][2];
+    steerK_p = (float)setting.data[2][3];
+    steerK_d = (float)setting.data[2][4];
+    steerWloop.Kp = (float)setting.data[2][5];
+    steerWloop.Kd = (float)setting.data[2][6];
 //	MotorPID.P = setting.data[1][1];
 //	MotorPID.I = setting.data[1][2];
 //	speed.Stan = setting.data[1][3];
@@ -349,6 +377,14 @@ void Save_Data(void)
 	EEPROMData[12] = elementArray.ElementArray[3];
 	EEPROMData[13] = elementArray.ElementArray[4];
 	EEPROMData[14] = elementArray.ElementArray[5];
+  
+    EEPROMData[15] = crossmeet.SubWaitTime;
+    EEPROMData[16] = speed.Stan;
+    EEPROMData[17] = steerK_p;
+    EEPROMData[18] = steerK_d;
+    EEPROMData[19] = steerWloop.Kp;
+    EEPROMData[20] = steerWloop.Kd;
+        
 	
 	EEPROMData[55] = sensor.advalue.ad_offset_val[EEEL];
 	EEPROMData[56] = sensor.advalue.ad_offset_val[EEEM];

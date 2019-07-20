@@ -18,9 +18,9 @@
 #define Right_Roundabout_OUT 9
 #define Lamp 10
 #define Lamp_D 11
-#define Transome_or_Crossmeeting 12
+#define Transome 12
 #define Crossmeeting 13
-#define Transome 14
+#define Transome_or_Crossmeeting 14
 
 
 typedef struct
@@ -100,8 +100,4 @@ extern TRANSOMEORCROSSMEET_CLASS elementArray;
 extern int pro;
 extern float sensorSum;
 extern float Lamp_Odometer;
-
-
-void Elemental_chain(void);
-
 #endif
